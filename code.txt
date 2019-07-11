@@ -1,0 +1,25 @@
+function main():
+#consts
+	const[0] := 0
+	const[1] := 1
+	const[2] := 20
+	const[3] := 15
+	const[4] := 10
+#code
+	push consts[0]
+	pop  memory[0]
+	push consts[2]
+loop_start:
+	push memory[0]
+	push consts[4]
+	ge
+	ifjump loop_end
+	push consts[3]
+	add
+	push memory[0]
+	push consts[1]
+	add
+	pop  memory[0]
+	jump loop_start
+loop_end:
+end
