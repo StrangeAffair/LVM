@@ -1,4 +1,5 @@
 #include "Token.hpp"
+#include <sstream>
 
 std::string ToString(TokenType type)
 {
@@ -59,8 +60,10 @@ std::string ToString(TokenType type)
 
 std::string ToString(const Token& t)
 {
+    std::ostringstream result;
     if (t.data == "")
-        return '(' + ToString(t.type) + ')';
+        result << '[' << t.line << ", " << t.column << ']' << ' ' << '(' << ToString(t.type) << ')';
     else
-        return '(' + ToString(t.type) + ',' + ' ' + t.data + ')';
+        result << '[' << t.line << ", " << t.column << ']' << ' ' << '(' << ToString(t.type) << ", " << t.data << ')';
+    return result.str();
 }

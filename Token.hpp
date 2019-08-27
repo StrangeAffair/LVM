@@ -43,26 +43,39 @@ class Token
     TokenType   type;
     std::string data;
 public:
+    size_t      line;
+    size_t      column;
+public:
     Token()
     {
-        this->type = TokenType::None;
-        this->data = "";
+        this->type   = TokenType::None;
+        this->data   = "";
+        this->line   = 0;
+        this->column = 0;
     }
-    Token(TokenType type)
+    Token(TokenType type, size_t line, size_t column)
     {
-        this->type = type;
-        this->data = "";
+        this->type   = type;
+        this->data   = "";
+        this->line   = line;
+        this->column = column;
     }
-    Token(TokenType type, std::string text)
+    Token(TokenType type, std::string text, size_t line, size_t column)
     {
-        this->type = type;
-        this->data = text;
+        this->type   = type;
+        this->data   = text;
+        this->line   = line;
+        this->column = column;
     }
 public:
     TokenType   GetType() const
     {return type;}
     std::string GetData() const
     {return data;}
+    size_t      GetLine() const
+    {return line;}
+    size_t      GetColumn() const
+    {return column;}
 public:
     const Token& operator=(const Token& other)
     {

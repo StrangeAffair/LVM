@@ -1,11 +1,10 @@
 function main():
-#consts
 	const[0] := 0
 	const[1] := 1
 	const[2] := 20
 	const[3] := 15
 	const[4] := 10
-#code
+begin
 	push consts[0]
 	pop  memory[0]
 	push consts[2]
@@ -22,4 +21,10 @@ loop_start:
 	pop  memory[0]
 	jump loop_start
 loop_end:
+end
+
+function nothing():
+begin
+	push memory[0]
+	pop  memory[0]
 end
