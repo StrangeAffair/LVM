@@ -16,6 +16,7 @@ struct Command
     size_t size;
 };
 
+
 struct ParserFunction
 {
     string name;

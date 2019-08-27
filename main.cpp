@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cassert>
 
+
 #include "Lexer.hpp"
 #include "Parser.hpp"
 
@@ -133,7 +134,6 @@ int push_const(Command cmd, state* st)
     memcpy(&offset, cmd.data + 1, sizeof(offset));
 
     push(st, 1, &st->fn->consts[offset]);
-
     return 0;
 }
 
@@ -399,6 +399,7 @@ int run_one(state* st)
     }
 }
 
+
 int run(state* st)
 {
     int    count    = 0;
@@ -428,7 +429,7 @@ std::string ReadFile(const char* name)
 {
     std::ifstream    fin;
     fin.open(name);
-
+  
     if (!fin)
     {
         std::cout << "file not opened";

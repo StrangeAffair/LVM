@@ -109,7 +109,6 @@ std::vector<Token> Lexer::Tokenize()
 {
     size_t line   = 1;
     size_t column = 1;
-
     std::string text = "";
     bool ok;
     while(position < length)

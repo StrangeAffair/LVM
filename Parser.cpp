@@ -806,7 +806,6 @@ size_t Parser::ReadPop(Command* dest)
     return 5;
 }
 
-
 /*
 Statement* Parser::statement()
 {
