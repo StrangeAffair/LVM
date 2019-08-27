@@ -12,10 +12,10 @@ class Lexer{
     size_t position;
     size_t length;
 private:
-    void AddToken(TokenType type)
-    {output.push_back(Token(type));}
-    void AddToken(TokenType type, std::string value)
-    {output.push_back(Token(type, value));}
+    void AddToken(TokenType type, size_t line, size_t column)
+    {output.push_back(Token(type, line, column));}
+    void AddToken(TokenType type, std::string value, size_t line, size_t column)
+    {output.push_back(Token(type, value, line, column));}
 private:
     bool Match(const std::string& word);
     bool GetNumber(std::string& result);

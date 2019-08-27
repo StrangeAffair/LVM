@@ -107,6 +107,9 @@ bool Lexer::GetID(std::string& result)
 
 std::vector<Token> Lexer::Tokenize()
 {
+    size_t line   = 1;
+    size_t column = 1;
+
     std::string text = "";
     bool ok;
     while(position < length)
@@ -118,7 +121,8 @@ std::vector<Token> Lexer::Tokenize()
             case '5': case '6': case '7': case '8': case '9':
                 ok = GetNumber(text);
                 if (ok)
-                    AddToken(TokenType::Number, text);
+                    AddToken(TokenType::Number, text, line, column);
+                column += text.length();
                 break;
             case 'a': case 'A': case 'b': case 'B': case 'c': case 'C':
             case 'd': case 'D': case 'e': case 'E': case 'f': case 'F':
@@ -131,79 +135,103 @@ std::vector<Token> Lexer::Tokenize()
             case 'y': case 'Y': case 'z': case 'Z': case '_':
                 ok = GetID(text);
                 if (ok)
-                    AddToken(TokenType::ID, text);
+                    AddToken(TokenType::ID, text, line, column);
+                column += text.length();
                 break;
             case '"':
                 ok = GetString(text);
                 if (ok)
-                    AddToken(TokenType::String, text);
+                    AddToken(TokenType::String, text, line, column);
+                column += text.length() + 2;
                 break;
             case '+':
-                AddToken(TokenType::Plus);
+                AddToken(TokenType::Plus, line, column);
                 ++position;
+                ++column;
                 break;
             case '-':
-                AddToken(TokenType::Minus);
+                AddToken(TokenType::Minus, line, column);
                 ++position;
+                ++column;
                 break;
             case '*':
-                AddToken(TokenType::Star);
+                AddToken(TokenType::Star, line, column);
                 ++position;
+                ++column;
                 break;
             case '/':
-                AddToken(TokenType::Slash);
+                AddToken(TokenType::Slash, line, column);
                 ++position;
+                ++column;
                 break;
             case '(':
-                AddToken(TokenType::LParen);
+                AddToken(TokenType::LParen, line, column);
                 ++position;
+                ++column;
                 break;
             case ')':
-                AddToken(TokenType::RParen);
+                AddToken(TokenType::RParen, line, column);
                 ++position;
+                ++column;
                 break;
             case '[':
-                AddToken(TokenType::LBracket);
+                AddToken(TokenType::LBracket, line, column);
                 ++position;
+                ++column;
                 break;
             case ']':
-                AddToken(TokenType::RBracket);
+                AddToken(TokenType::RBracket, line, column);
                 ++position;
+                ++column;
                 break;
             case '{':
-                AddToken(TokenType::LBrace);
+                AddToken(TokenType::LBrace, line, column);
                 ++position;
+                ++column;
                 break;
             case '}':
-                AddToken(TokenType::RBrace);
+                AddToken(TokenType::RBrace, line, column);
                 ++position;
+                ++column;
                 break;
             case ':':
                 if (Match(":="))
                 {
-                    AddToken(TokenType::Assign);
+                    AddToken(TokenType::Assign, line, column);
                     //position += 2;
+                    column += 2;
                     break;
                 }
-                AddToken(TokenType::Colon);
+                AddToken(TokenType::Colon, line, column);
                 ++position;
+                ++column;
                 break;
             case ';':
-                AddToken(TokenType::Semicolon);
+                AddToken(TokenType::Semicolon, line, column);
                 ++position;
+                ++column;
                 break;
-            case ' ': case '\n': case '\t':
+            case ' ': case '\t':
                 ++position;
+                ++column;
                 break;
+            case '\n':
+                ++line;
+                ++position;
+                column = 1;
+                break;
+            /*
             case '#':
                 ++position;
                 ok = GetID(text);
                 if (ok)
-                    AddToken(TokenType::Modificator, text);
+                    AddToken(TokenType::Modificator, text, line);
                 break;
+            */
             default:
-                AddToken(TokenType::None, std::string(&current, 1));
+                AddToken(TokenType::None, std::string(&current, 1), line, column);
                 ++position;
+                ++column;
                 break;
         }
     }

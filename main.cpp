@@ -1,9 +1,22 @@
 #include <iostream>
 #include <fstream>
+#include <cassert>
 
 #include "Lexer.hpp"
 #include "Parser.hpp"
 
+struct RunState
+{
+    Function* fn; //function number in functions list
+    size_t    position;
+};
+
+struct CallStack
+{
+    RunState* start;
+    RunState* finish;
+    RunState* current;
+};
 
 struct DataStack
 {
@@ -12,14 +25,62 @@ struct DataStack
     Object* current;
 };
 
-struct state
+struct ExceptionStack
 {
-    DataStack dstack;
-
-    Object consts[256];
-    Object memory[256];
+    void* start;
+    void* finish;
+    void* current;
 };
 
+struct state
+{
+    ExceptionStack estack;
+    CallStack      cstack;
+    DataStack      dstack;
+
+    Object memory[256];
+
+    Function* FunctionList;
+    size_t    size;
+    Function* fn;    //function number
+    size_t    position;
+};
+
+bool init(state* st, std::vector<Function>* functions)
+{
+    assert(st        != nullptr);
+    assert(functions != nullptr);
+
+    st->size         = functions->size();
+    st->FunctionList = functions->data();
+
+    DataStack* dstack = &(st->dstack);
+    dstack->start     = (Object*) calloc(256, sizeof(Object));
+    if (dstack->start == nullptr)
+        return false;
+    dstack->finish    = dstack->start + 256;
+    dstack->current   = dstack->start;
+
+    CallStack* cstack = &(st->cstack);
+    cstack->start     = (RunState*) calloc(256, sizeof(RunState));
+    if (cstack->start == nullptr)
+        return false;
+    cstack->finish    = cstack->start + 256;
+    cstack->current   = cstack->start;
+
+    st->fn       = nullptr;
+    st->position = 0;
+    for(size_t i = 0; i < st->size; ++i)
+        if (st->FunctionList[i].name == "main")
+        {
+            st->fn = &st->FunctionList[i];
+            break;
+        }
+    if (st->fn == nullptr)
+        return false;
+
+    return true;
+}
 
 void push(state* st, size_t argc, Object* argv)
 {
@@ -71,7 +132,7 @@ int push_const(Command cmd, state* st)
     size_t offset;
     memcpy(&offset, cmd.data + 1, sizeof(offset));
 
-    push(st, 1, st->consts + offset);
+    push(st, 1, &st->fn->consts[offset]);
 
     return 0;
 }
@@ -259,38 +320,38 @@ int jump_if(Command cmd, state* st)
     next    - data for command (command + sizeof(cmd_type))
     @return next instruction
 */
-int run_one(const std::vector<Command>& code, size_t& position, state* st)
+int run_one(state* st)
 {
-    uint8_t instruction = code[position].data[0];
-    switch(instruction)
+    const Command* code = st->fn->Code;
+    const Command& cmd  = code[st->position];
+    switch(cmd.data[0])
     {
         case 0:
-            ++position;
+            ++st->position;
             return 0;
         case 1:
-            return push_const (code[position++], st);
+            return push_const  (code[st->position++], st);
         case 2:
-            return load_memory(code[position++], st);
+            return load_memory (code[st->position++], st);
         case 3:
-            return store_memory(code[position++], st);
+            return store_memory(code[st->position++], st);
         case 4:
-            return add(code[position++], st);
+            return add(code[st->position++], st);
         case 0x10:
-            return eq(code[position++], st);
+            return eq(code[st->position++], st);
         case 0x11:
-            return ne(code[position++], st);
+            return ne(code[st->position++], st);
         case 0x12:
-            return lt(code[position++], st);
+            return lt(code[st->position++], st);
         case 0x13:
-            return le(code[position++], st);
+            return le(code[st->position++], st);
         case 0x14:
-            return gt(code[position++], st);
+            return gt(code[st->position++], st);
         case 0x15:
-            return ge(code[position++], st);
+            return ge(code[st->position++], st);
         case 0x20:
         {
-            Command temp = code[position];
-            memcpy(&position, temp.data + 1, sizeof(size_t));
+            memcpy(&st->position, cmd.data + 1, sizeof(size_t));
             return 0;
         }
         case 0x21:
@@ -305,31 +366,48 @@ int run_one(const std::vector<Command>& code, size_t& position, state* st)
 
             if (Object::get<bool>(temp))
             {
-                Command temp = code[position];
-                memcpy(&position, temp.data + 1, sizeof(size_t));
+                memcpy(&st->position, cmd.data + 1, sizeof(size_t));
                 return 0;
             }
             else
             {
-                ++position;
+                ++st->position;
                 return 0;
             }
+        }
+        //call function
+        case 0x30:
+        {
+            CallStack cstack = st->cstack;
+            cstack.current[0].fn       = st->fn;
+            cstack.current[0].position = st->position;
+            ++cstack.current;
+
+            size_t offset;
+            memcpy(&offset, cmd.data + 1, sizeof(size_t));
+            if (offset >= st->size)
+            {
+                fprintf(stderr, "index of function in command call is out of range");
+                return 1;
+            }
+
+            st->fn       = &st->FunctionList[offset];
+            st->position = 0;
         }
         default:
             return -1;
     }
 }
 
-int run(const std::vector<Command>& code, state* st)
+int run(state* st)
 {
     int    count    = 0;
     int    error    = 0;
-    size_t position = 0;
     while(true)
     {
-        if ((0 <= position) && (position < code.size()))
+        if ((0 <= st->position) && (st->position < st->fn->size))
         {
-            error = run_one(code, position, st);
+            error = run_one(st);
             if (error)
             {
                 fprintf(stderr, "error in run_one() = %d, iteration = %d", error, count);
@@ -337,28 +415,24 @@ int run(const std::vector<Command>& code, state* st)
             }
         }
         else
-            break;
+        {
+            fprintf(stderr, "code borders corruption");
+            return 1;
+        }
         ++count;
     }
-    if (position == code.size())
-        return 0;
-    else
-    {
-        fprintf(stderr, "code borders corruption");
-        return 1;
-    }
+    return 0;
 }
 
-
-int main()
+std::string ReadFile(const char* name)
 {
     std::ifstream    fin;
-    fin.open("code.txt");
+    fin.open(name);
 
     if (!fin)
     {
         std::cout << "file not opened";
-        return 1;
+        return "";
     }
 
     std::string temp = "";
@@ -367,35 +441,46 @@ int main()
     while(getline(fin, temp))
         text += temp + '\n';
 
+    return text;
+}
+
+int main()
+{
+    std::string text = ReadFile("code.txt");
+
     Lexer lex(text);
     std::vector<Token> tokens = lex.Tokenize();
     for(auto token : tokens)
         printf("%s\n", ToString(token).c_str());
 
     Parser par(tokens);
-    std::vector<Function> functions = par.Parse();
+    std::vector<Function>& functions = par.Parse();
+
+    for(std::vector<Function>::iterator it = functions.begin(); it != functions.end(); ++it)
+    {
+        fprintf(stdout, "function %s():\n", it->name.c_str());
+        for(auto Const : it->consts)
+        {
+            fprintf(stdout, "%2x ", Const.first);
+            fprintf(stdout, "%p\n", Const.second.data);
+        }
+        for(size_t i = 0; i < it->size; ++i)
+        {
+            Command* temp = it->Code + i;
+            for(size_t j = 0; j < temp->size; ++j)
+            {
+                fprintf(stdout, "%2x ", temp->data[j]);
+            }
+            fprintf(stdout, "\n");
+        }
+    }
+
+
 
     state st;
-    st.dstack.start   = (Object*) calloc(256, sizeof(Object));
-    st.dstack.finish  = st.dstack.start + 256;
-    st.dstack.current = st.dstack.start;
-    std::map<size_t, Object> consts = functions[0].consts;
-    for(auto Const : consts)
-    {
+    if (!init(&st, &functions))
+        return 1;
 
-        fprintf(stdout, "found i = %d\n", Const.first);
-        Object::copy(st.consts[Const.first], consts[Const.first]);
-        //if (consts.find(i) != consts.end())
-        //{
-        //    Object::copy(st.consts[i], consts[i]);
-        //}
-    }
-
-    for(size_t i = 0; i < 5; ++i)
-    {
-        fprintf(stdout, "st->consts[%d] = %d\n", i, *(int32_t*) st.consts[i].data);
-    }
-
-    run(functions[0].code, &st);
+    run(&st);
     return 0;
 }
