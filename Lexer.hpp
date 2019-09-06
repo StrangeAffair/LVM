@@ -16,6 +16,9 @@ private:
     {output.push_back(Token(type, line, column));}
     void AddToken(TokenType type, std::string value, size_t line, size_t column)
     {output.push_back(Token(type, value, line, column));}
+    void AddTokenKeyword(std::string text, size_t line, size_t column);
+private:
+    bool IsKeyword(std::string text);
 private:
     bool Match(const std::string& word);
     bool GetNumber(std::string& result);

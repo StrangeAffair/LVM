@@ -27,6 +27,7 @@ for each read with digit in the end of function name.
 (Example: ReadFunction1 and ReadFunction2)
 */
 
+/*
 //functions for reading numbers
 static
 void ReadSize(const Token* t, Object& dest)
@@ -47,6 +48,7 @@ void ReadInt32(const Token* t, Object& dest)
     else
         dest.clear();
 }
+*/
 
 static
 size_t ParseSize (const Token* t, size_t& dest)
@@ -267,7 +269,7 @@ vector<Function>& Parser::Parse()
 ///5)look through code (check for correct syntax) and get metkas
 size_t Parser::ReadFunction1()
 {
-    Match(TokenType::ID, "function", "expected function keyword");
+    Match(TokenType::KeywordFunction, "expected function keyword");
     if (error)
         return 1;
 
@@ -327,7 +329,7 @@ size_t Parser::ReadFunction2()
 
 size_t Parser::ReadConst1()
 {
-    Match(TokenType::ID, "const", "expected const word");
+    Match(TokenType::KeywordConst, "expected const word");
     if (error)
         return 1;
 
@@ -383,7 +385,7 @@ size_t Parser::ReadConst2(Function* dest)
 size_t Parser::ReadConsts1()
 {
     size_t count = 0;
-    while(!Match(TokenType::ID, "begin", nullptr))
+    while(!Match(TokenType::KeywordBegin, nullptr))
     {
         ReadConst1();
         if (error)
@@ -396,7 +398,7 @@ size_t Parser::ReadConsts1()
 size_t Parser::ReadConsts2(Function* dest)
 {
     size_t count = 0;
-    while(!Match(TokenType::ID, "begin", nullptr))
+    while(!Match(TokenType::KeywordBegin, nullptr))
     {
         ReadConst2(dest);
         if (error)
@@ -442,7 +444,7 @@ size_t Parser::ReadMetka(size_t cmd_number, map<string, size_t>& MetkaList)
 size_t Parser::ReadCode1(Function* dest)
 {
     size_t count = 0;
-    while(!Match(TokenType::ID, "end", nullptr))
+    while(!Match(TokenType::KeywordEnd, nullptr))
     {
         if (IsMetka())
         {
@@ -450,7 +452,10 @@ size_t Parser::ReadCode1(Function* dest)
             continue;
         }
         if (ReadCommand1() != 0)
+        {
+            error = 1;
             return count;
+        }
         ++count;
     }
 
@@ -462,7 +467,7 @@ size_t Parser::ReadCode1(Function* dest)
 size_t Parser::ReadCode2(Function* dest)
 {
     size_t count = 0;
-    while(!Match(TokenType::ID, "end", nullptr))
+    while(!Match(TokenType::KeywordEnd, nullptr))
     {
         if (IsMetka())
         {
@@ -470,7 +475,10 @@ size_t Parser::ReadCode2(Function* dest)
             continue;
         }
         if (ReadCommand2(dest->Code + count, dest->__MetkaList, FunctionSearchList) != 0)
+        {
+            error = 1;
             return count;
+        }
         ++count;
     }
     return 0;
@@ -509,12 +517,12 @@ size_t Parser::ReadCommand1()
         Skip(2);
         return 0;
     }
-    if (CommandName == "ifjump")
+    if (CommandName == "jge")
     {
         Token* next = Get(1);
         if (next->GetType() != TokenType::ID)
         {
-            fprintf(stderr, "expected metka name (TokenType::ID) after ifjump word (%d,%d)", next->line, next->column);
+            fprintf(stderr, "expected metka name (TokenType::ID) after jge word (%d,%d)", next->line, next->column);
             return 3;
         }
         Skip(2);
@@ -531,12 +539,19 @@ size_t Parser::ReadCommand1()
         Skip(2);
         return 0;
     }
+    if (CommandName == "ret")
+    {
+        Skip(1);
+        return 0;
+    }
 
     return 2; //no command found
 }
 
 size_t Parser::ReadCommand2(Command* dest, const map<string, size_t>& MetkaList, const map<string, size_t>& FunctionList)
 {
+    assert(Get(0) != nullptr);
+
     string CommandName = Get(0)->GetData();
     if (CommandName == "push")
         return ReadPush(dest) != 5;
@@ -556,10 +571,17 @@ size_t Parser::ReadCommand2(Command* dest, const map<string, size_t>& MetkaList,
         Skip(1);
         return 0;
     }
-    if ((CommandName == "jump") || (CommandName == "ifjump"))
+    if ((CommandName == "jump") || (CommandName == "jge"))
         return ReadJump(dest, MetkaList);
     if ((CommandName == "call"))
         return ReadCall(dest, FunctionList);
+    if ((CommandName == "ret"))
+    {
+        dest->data[0] = 0x31;
+        dest->size    = 1;
+        Skip(1);
+        return 0;
+    }
     return 1;
 }
 
@@ -572,22 +594,44 @@ size_t Parser::ReadJump(Command* dest, const map<string, size_t>& MetkaList)
 
     assert((current->GetType() == TokenType::ID));
     assert((next   ->GetType() == TokenType::ID));
-    assert((current->GetData() == "jump") || (current->GetData() == "ifjump"));
 
-    size_t jump_type = 0;
+    size_t jump_type = ((size_t) -1);
     if (current->GetData() == "jump")
+        jump_type = 0;
+    if (current->GetData() == "jeq")
         jump_type = 1;
-    if (current->GetData() == "ifjump")
+    if (current->GetData() == "jne")
         jump_type = 2;
+    if (current->GetData() == "jlt")
+        jump_type = 3;
+    if (current->GetData() == "jle")
+        jump_type = 4;
+    if (current->GetData() == "jgt")
+        jump_type = 5;
+    if (current->GetData() == "jge")
+        jump_type = 6;
+
+    if (jump_type == ((size_t) -1))
+        return 1;
 
     size_t offset = FindMetka(next->GetData(), MetkaList);
     if (offset == (size_t) -1)
-        return 1;
+        return 2;
 
-    if (jump_type == 1)
+    if (jump_type == 0)
         dest->data[0] = 0x20;
-    if (jump_type == 2)
+    if (jump_type == 1)
         dest->data[0] = 0x21;
+    if (jump_type == 2)
+        dest->data[0] = 0x22;
+    if (jump_type == 3)
+        dest->data[0] = 0x23;
+    if (jump_type == 4)
+        dest->data[0] = 0x24;
+    if (jump_type == 5)
+        dest->data[0] = 0x25;
+    if (jump_type == 6)
+        dest->data[0] = 0x26;
     memcpy(dest->data + 1, &offset, sizeof(size_t));
     dest->size = 1 + sizeof(size_t);
     Skip(2);
@@ -613,6 +657,7 @@ size_t Parser::ReadCall(Command* dest, const map<string, size_t>& FunctionList)
 
     memcpy(dest->data + 1, &offset, sizeof(size_t));
     dest->size = 1 + sizeof(size_t);
+    Skip(2);
     return 0;
 }
 

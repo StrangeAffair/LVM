@@ -53,6 +53,14 @@ std::string ToString(TokenType type)
             return "TokenType::Colon";
         case TokenType::Modificator:
             return "TokenType::Modificator";
+        case TokenType::KeywordFunction:
+            return "TokenType::KeywordFunction";
+        case TokenType::KeywordConst:
+            return "TokenType::KeywordConst";
+        case TokenType::KeywordBegin:
+            return "TokenType::KeywordBegin";
+        case TokenType::KeywordEnd:
+            return "TokenType::KeywordEnd";
         default:
             return "UNKNOWN";
     }

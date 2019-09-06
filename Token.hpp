@@ -35,7 +35,12 @@ enum class TokenType
     Semicolon = 50,
     Colon     = 51,
 
-    Modificator = 100
+    Modificator = 100,
+
+    KeywordFunction = 1000,
+    KeywordConst    = 1001,
+    KeywordBegin    = 1002,
+    KeywordEnd      = 1003
 };
 
 class Token

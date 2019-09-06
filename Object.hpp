@@ -5,10 +5,12 @@
 #include <cstdint>
 #include <cstring>
 
+/*
 class Object;
 
 typedef Object (*operator3)(const Object&, const Object&);
 typedef void   (*operator2)(      Object&, const Object&);
+*/
 
 ///implemets COW(Copy on Write) Objects
 class Object
@@ -32,6 +34,8 @@ public:
         return type;
     }
 public:
+    void set();
+public:
     template<typename T>
     static void set(Object& obj, const T& value);
 public:
@@ -40,9 +44,10 @@ public:
     template<typename T>
     static auto get(      Object& obj) -> T&;
 public:
-    static void move(Object& dest,       Object& src);
-    static void copy(Object& dest, const Object& src);
-    void clear();
+    static void move (Object& dest,       Object& src);
+    static void copy (Object& dest, const Object& src);
+    static void clear(Object& dest);
+/*
 public:
     static operator2 add2_function(ObjectType left, ObjectType right);
     static operator2 mul2_function(ObjectType left, ObjectType right);
@@ -52,6 +57,7 @@ public:
     static operator3   le_function(ObjectType left, ObjectType right);
     static operator3   gt_function(ObjectType left, ObjectType right);
     static operator3   ge_function(ObjectType left, ObjectType right);
+*/
 };
 
 #endif // _Object_HPP_

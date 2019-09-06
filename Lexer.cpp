@@ -105,6 +105,44 @@ bool Lexer::GetID(std::string& result)
     return true;
 }
 
+bool Lexer::IsKeyword(std::string text)
+{
+    if (text == "function")
+        return true;
+    if (text == "const")
+        return true;
+    if (text == "begin")
+        return true;
+    if (text == "end")
+        return true;
+    return false;
+}
+
+void Lexer::AddTokenKeyword(std::string text, size_t line, size_t column)
+{
+    if (text == "function")
+    {
+        AddToken(TokenType::KeywordFunction, line, column);
+        return;
+    }
+    if (text == "const")
+    {
+        AddToken(TokenType::KeywordConst, line, column);
+        return;
+    }
+    if (text == "begin")
+    {
+        AddToken(TokenType::KeywordBegin, line, column);
+        return;
+    }
+    if (text == "end")
+    {
+        AddToken(TokenType::KeywordEnd, line, column);
+        return;
+    }
+    return;
+}
+
 std::vector<Token> Lexer::Tokenize()
 {
     size_t line   = 1;
@@ -135,7 +173,12 @@ std::vector<Token> Lexer::Tokenize()
             case 'y': case 'Y': case 'z': case 'Z': case '_':
                 ok = GetID(text);
                 if (ok)
-                    AddToken(TokenType::ID, text, line, column);
+                {
+                    if (IsKeyword(text))
+                        AddTokenKeyword(text, line, column);
+                    else
+                        AddToken(TokenType::ID, text, line, column);
+                }
                 column += text.length();
                 break;
             case '"':
@@ -220,14 +263,6 @@ std::vector<Token> Lexer::Tokenize()
                 ++position;
                 column = 1;
                 break;
-            /*
-            case '#':
-                ++position;
-                ok = GetID(text);
-                if (ok)
-                    AddToken(TokenType::Modificator, text, line);
-                break;
-            */
             default:
                 AddToken(TokenType::None, std::string(&current, 1), line, column);
                 ++position;

@@ -23,7 +23,8 @@ public:
 
         Size,
 
-        String255
+        String255,
+        Exception
     };
 public:
     ObjectType()

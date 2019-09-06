@@ -19,10 +19,11 @@ void Object::copy(Object& dest, const Object& src)
     }
 }
 
-void Object::clear()
+void Object::clear(Object& dest)
 {
-    free(data);
-    type = ObjectType::None;
-    data = nullptr;
+    if (dest.data != nullptr)
+        free(dest.data);
+    dest.type = ObjectType::None;
+    dest.data = nullptr;
 }
 

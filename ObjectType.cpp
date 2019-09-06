@@ -62,6 +62,8 @@ size_t ObjectType::GetTypeSize(Type type)
             return sizeof(uint64_t);
         case ObjectType::Size:
             return sizeof(size_t);
+        case ObjectType::String255:
+            return 256;
         default:
             return 0;
     }
